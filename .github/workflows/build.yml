@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read #  to fetch code (actions/checkout)
+
+env:
+  # Common Maven arguments
+  MAVEN_ARGS: --show-version --batch-mode --no-transfer-progress
+
+jobs:
+  build:
+    name: "Build on JDK ${{ matrix.java }} (${{ matrix.java-package }}) [${{ matrix.expander_leg
+      }}]"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - java: 25
+          java-package: jdk
+          os: macos-latest
+          arch: arm64
+          runner: macos-latest
+          expander_leg: macos-latest-25-arm64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1    # v7.0.1
+      with:
+        persist-credentials: false
+    - name: "Set up JDK ${{ matrix.java }}"
+      uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c    # v6.0.0
+      with:
+        distribution: ${{ matrix.distribution || 'temurin' }}
+        java-version: ${{ matrix.java }}
+        java-package: ${{ matrix.java-package }}
+        cache: 'maven'
+    - name: Build with Maven
+        # This also runs javadoc:jar to detect any issues with the Javadoc generated during release
+      run: mvn verify javadoc:jar ${{ matrix.extra-mvn-args || '' }}
+
+  # Build a subset of the Gson API, see also https://github.com/google/gson/pull/2946
+    timeout-minutes: 150
